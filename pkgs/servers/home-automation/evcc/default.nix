@@ -1,5 +1,5 @@
 { lib
-, buildGo120Module
+, buildGoModule
 , fetchFromGitHub
 , fetchNpmDeps
 , cacert
@@ -14,22 +14,22 @@
 , stdenv
 }:
 
-buildGo120Module rec {
+buildGoModule rec {
   pname = "evcc";
-  version = "0.115.0";
+  version = "0.118.1";
 
   src = fetchFromGitHub {
     owner = "evcc-io";
     repo = pname;
     rev = version;
-    hash = "sha256-vA2HpkzNuHulUUZKL6Wm2Y052v4JdC5V8hADq78rK5c=";
+    hash = "sha256-EAvY+JNk1V4oWW5mbbEIRjaUqTOib6zY8hab0Mw2hUk=";
   };
 
-  vendorHash = "sha256-/TqA2WTNJ3cSrqLgEly1KHGvMA/MQ+p364G0ne0ezfQ=";
+  vendorHash = "sha256-CkJpTXbjHRXcZp+FWGal91kkFkIMoKZ6/zmY+8Udmos=";
 
   npmDeps = fetchNpmDeps {
     inherit src;
-    hash = "sha256-LGlM+itulqtlwyVKfVGiZtTpcCmx+lVvE3JOFkYRHXk=";
+    hash = "sha256-w2xMG0vHx4g9AAvNWRwR3u9w6PrHtQV7TETnDRkmkBk=";
   };
 
   nativeBuildInputs = [
@@ -53,6 +53,7 @@ buildGo120Module rec {
 
   tags = [
     "release"
+    "test"
   ];
 
   ldflags = [
@@ -72,9 +73,6 @@ buildGo120Module rec {
     # requires network access
     rm meter/template_test.go
     rm charger/template_test.go
-    rm vehicle/template_test.go
-    # times out (since 0.115.0, bisected to 31ab90e6381b30278731bd01effa62bdfb884ebc)
-    rm util/templates/render_testing.go
   '';
 
   passthru = {

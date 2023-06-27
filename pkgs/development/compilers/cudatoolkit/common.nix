@@ -9,6 +9,7 @@ args@
 , autoAddOpenGLRunpathHook
 , addOpenGLRunpath
 , alsa-lib
+, curlMinimal
 , expat
 , fetchurl
 , fontconfig
@@ -16,6 +17,7 @@ args@
 , gdk-pixbuf
 , glib
 , glibc
+, gst_all_1
 , gtk2
 , lib
 , libxkbcommon
@@ -29,6 +31,7 @@ args@
 , python3 # FIXME: CUDAToolkit 10 may still need python27
 , pulseaudio
 , requireFile
+, stdenv
 , backendStdenv # E.g. gcc11Stdenv, set in extension.nix
 , unixODBC
 , wayland
@@ -128,7 +131,22 @@ backendStdenv.mkDerivation rec {
     ucx
     xorg.libxshmfence
     xorg.libxkbfile
-  ];
+  ] ++ lib.optionals (lib.versionAtLeast version "12.1") (map lib.getLib [
+    # Used by `/target-linux-x64/CollectX/clx` and `/target-linux-x64/CollectX/libclx_api.so` for:
+    # - `libcurl.so.4`
+    curlMinimal
+
+    # Used by `/target-linux-x64/libQt6Multimedia.so.6` for:
+    # - `libgstaudio-1.0.so.0`
+    # - `libgstvideo-1.0.so.0`
+    # - `libgstpbutils-1.0.so.0`
+    # - `libgstallocators-1.0.so.0`
+    # - `libgstapp-1.0.so.0`
+    # - `libgstbase-1.0.so.0`
+    # - `libgstreamer-1.0.so.0`
+    gst_all_1.gstreamer
+    gst_all_1.gst-plugins-base
+  ]);
 
   # Prepended to runpaths by autoPatchelf.
   # The order inherited from older rpath preFixup code
@@ -136,8 +154,8 @@ backendStdenv.mkDerivation rec {
     (placeholder "lib")
     (placeholder "out")
     "${placeholder "out"}/nvvm"
-    # Is it not handled by autoPatchelf automatically?
-    "${lib.getLib backendStdenv.cc.cc}/lib64"
+    # NOTE: use the same libstdc++ as the rest of nixpkgs, not from backendStdenv
+    "${lib.getLib stdenv.cc.cc}/lib64"
     "${placeholder "out"}/jre/lib/amd64/jli"
     "${placeholder "out"}/lib64"
     "${placeholder "out"}/nvvm/lib64"
@@ -156,6 +174,10 @@ backendStdenv.mkDerivation rec {
     # - do we even want to use nvidia-shipped libssl?
     "libcom_err.so.2"
   ];
+
+  preFixup = ''
+    patchelf $out/lib64/libnvrtc.so --add-needed libnvrtc-builtins.so
+  '';
 
   unpackPhase = ''
     sh $src --keep --noexec
@@ -219,6 +241,7 @@ backendStdenv.mkDerivation rec {
 
       mv pkg/builds/nsight_systems/target-linux-x64 $out/target-linux-x64
       mv pkg/builds/nsight_systems/host-linux-x64 $out/host-linux-x64
+      rm $out/host-linux-x64/libstdc++.so*
     ''}
       ${lib.optionalString (lib.versionAtLeast version "11.8")
       # error: auto-patchelf could not satisfy dependency libtiff.so.5 wanted by /nix/store/.......-cudatoolkit-12.0.1/host-linux-x64/Plugins/imageformats/libqtiff.so
@@ -289,6 +312,10 @@ backendStdenv.mkDerivation rec {
   '' + lib.optionalString (lib.versionOlder version "8.0") ''
     # Hack to fix building against recent Glibc/GCC.
     echo "NIX_CFLAGS_COMPILE+=' -D_FORCE_INLINES'" >> $out/nix-support/setup-hook
+  ''
+  # 11.8 includes a broken symlink, include/include, pointing to targets/x86_64-linux/include
+  + lib.optionalString (lib.versions.majorMinor version == "11.8") ''
+    rm $out/include/include
   '' + ''
     runHook postInstall
   '';
@@ -333,6 +360,6 @@ backendStdenv.mkDerivation rec {
     homepage = "https://developer.nvidia.com/cuda-toolkit";
     platforms = [ "x86_64-linux" ];
     license = licenses.unfree;
+    maintainers = teams.cuda.members;
   };
 }
-

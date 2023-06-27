@@ -28,17 +28,17 @@
 
 stdenv.mkDerivation rec {
   pname = "qtcreator";
-  version = "9.0.2";
+  version = "10.0.2";
 
   src = fetchurl {
     url = "https://download.qt.io/official_releases/${pname}/${lib.versions.majorMinor version}/${version}/qt-creator-opensource-src-${version}.tar.xz";
-    sha256 = "sha256-7KWMxcoNOXiWlAVCYZzyA/WWLuPIggCBIics23Ifoyg=";
+    hash = "sha256-2n/F59wagMccCeJFt9JxHrAbpXXi+ZEQ0Ep855mSbU4=";
   };
 
   nativeBuildInputs = [
     cmake
     pkg-config
-    qttools
+    (qttools.override { withClang = true; })
     wrapQtAppsHook
     python3
     ninja

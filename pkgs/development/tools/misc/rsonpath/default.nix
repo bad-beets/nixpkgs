@@ -7,16 +7,16 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "rsonpath";
-  version = "0.3.3";
+  version = "0.5.0";
 
   src = fetchFromGitHub {
     owner = "v0ldek";
     repo = "rsonpath";
     rev = "v${version}";
-    hash = "sha256-kbtw8PhUecxIAxBdklbXtzS3P9o2aw8DCCJaC+vkNT0=";
+    hash = "sha256-J/KdnPvGZb1Y1IgcjtU2ZxzurjoUjo3oKVnxGeNwHHc=";
   };
 
-  cargoHash = "sha256-ZcnMpGgs/3VLdFsPPYzt2EkHNU26dvLnuOHy8OOtp0k=";
+  cargoHash = "sha256-npnTXnRz2ktTc5c7p8vINdFwGJcbsRQ21D6lmtddl7Y=";
 
   buildNoDefaultFeatures = true;
   buildFeatures = [
@@ -31,5 +31,6 @@ rustPlatform.buildRustPackage rec {
     changelog = "https://github.com/v0ldek/rsonpath/blob/${src.rev}/CHANGELOG.md";
     license = licenses.mit;
     maintainers = with maintainers; [ figsoda ];
+    mainProgram = "rq";
   };
 }

@@ -1,14 +1,17 @@
 { lib
 , python3
+, fetchPypi
+, nix-update-script
 }:
 
 python3.pkgs.buildPythonApplication rec {
   pname = "shell_gpt";
-  version = "0.7.3";
+  version = "0.9.3";
+  format = "pyproject";
 
-  src = python3.pkgs.fetchPypi {
+  src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-lS8zLtsh8Uz782KJwHqifEQnWQswbCXRVIfXWAmWtvI=";
+    sha256 = "sha256-g7zQ9ii38jBMUT0n8SjkccnGlkpCO4817GZ2yidxpMU=";
   };
 
   nativeBuildInputs = with python3.pkgs; [
@@ -23,9 +26,12 @@ python3.pkgs.buildPythonApplication rec {
     distro
     typer
     requests
+    hatchling
   ];
 
   pythonRelaxDeps = [ "requests" "rich" "distro" "typer" ];
+
+  passthru.updateScript = nix-update-script { };
 
   doCheck = false;
 

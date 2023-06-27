@@ -5761,16 +5761,7 @@
   "fortiosapi": [
     "setuptools"
   ],
-  "foundationdb51": [
-    "setuptools"
-  ],
-  "foundationdb52": [
-    "setuptools"
-  ],
-  "foundationdb60": [
-    "setuptools"
-  ],
-  "foundationdb61": [
+  "foundationdb71": [
     "setuptools"
   ],
   "fountains": [
@@ -15918,7 +15909,7 @@
     "cython",
     "setuptools"
   ],
-  "scikitimage": [
+  "scikit-image": [
     "cython",
     "setuptools"
   ],

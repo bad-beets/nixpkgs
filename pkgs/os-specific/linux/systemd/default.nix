@@ -98,8 +98,12 @@
 , withImportd ? !stdenv.hostPlatform.isMusl
 , withKmod ? true
 , withLibBPF ? lib.versionAtLeast buildPackages.llvmPackages.clang.version "10.0"
-    && stdenv.hostPlatform.isAarch -> lib.versionAtLeast stdenv.hostPlatform.parsed.cpu.version "6" # assumes hard floats
+    && (stdenv.hostPlatform.isAarch -> lib.versionAtLeast stdenv.hostPlatform.parsed.cpu.version "6") # assumes hard floats
     && !stdenv.hostPlatform.isMips64   # see https://github.com/NixOS/nixpkgs/pull/194149#issuecomment-1266642211
+    # buildPackages.targetPackages.llvmPackages is the same as llvmPackages,
+    # but we do it this way to avoid taking llvmPackages as an input, and
+    # risking making it too easy to ignore the above comment about llvmPackages.
+    && lib.meta.availableOn stdenv.hostPlatform buildPackages.targetPackages.llvmPackages.compiler-rt
 , withLibidn2 ? true
 , withLocaled ? true
 , withLogind ? true
@@ -117,6 +121,7 @@
 , withTimedated ? true
 , withTimesyncd ? true
 , withTpm2Tss ? true
+, withUkify ? false  # adds python to closure which is too much by default
 , withUserDb ? true
 , withUtmp ? !stdenv.hostPlatform.isMusl
   # tests assume too much system access for them to be feasible for us right now
@@ -135,11 +140,12 @@ assert withImportd -> withCompression;
 assert withCoredump -> withCompression;
 assert withHomed -> withCryptsetup;
 assert withHomed -> withPam;
+assert withUkify -> withEfi;
 
 let
   wantCurl = withRemote || withImportd;
   wantGcrypt = withResolved || withImportd;
-  version = "253.1";
+  version = "253.5";
 
   # Bump this variable on every (major) version change. See below (in the meson options list) for why.
   # command:
@@ -156,7 +162,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "systemd";
     repo = "systemd-stable";
     rev = "v${version}";
-    hash = "sha256-PyAhkLxDkT5gVocCXh8bst6PBgguASjnA82xinQOtjw=";
+    hash = "sha256-B3A9AvpfZ8SYsiZvHnWO4RHs1/6EdczWF2NmrSqxQ7c=";
   };
 
   # On major changes, or when otherwise required, you *must* reformat the patches,
@@ -168,9 +174,9 @@ stdenv.mkDerivation (finalAttrs: {
     ./0001-Start-device-units-for-uninitialised-encrypted-devic.patch
     ./0002-Don-t-try-to-unmount-nix-or-nix-store.patch
     ./0003-Fix-NixOS-containers.patch
-    ./0004-Look-for-fsck-in-the-right-place.patch
-    ./0005-Add-some-NixOS-specific-unit-directories.patch
-    ./0006-Get-rid-of-a-useless-message-in-user-sessions.patch
+    ./0004-Add-some-NixOS-specific-unit-directories.patch
+    ./0005-Get-rid-of-a-useless-message-in-user-sessions.patch
+    ./0006-hostnamed-localed-timedated-disable-methods-that-cha.patch
     ./0007-Fix-hwdb-paths.patch
     ./0008-Change-usr-share-zoneinfo-to-etc-zoneinfo.patch
     ./0009-localectl-use-etc-X11-xkb-for-list-x11.patch
@@ -183,6 +189,14 @@ stdenv.mkDerivation (finalAttrs: {
     ./0016-inherit-systemd-environment-when-calling-generators.patch
     ./0017-core-don-t-taint-on-unmerged-usr.patch
     ./0018-tpm2_context_init-fix-driver-name-checking.patch
+    ./0019-bootctl-also-print-efi-files-not-owned-by-systemd-in.patch
+
+    # https://github.com/systemd/systemd/pull/28000
+    (fetchpatch {
+      name = "fix-service-exit";
+      url = "https://github.com/systemd/systemd/commit/5f7f82ba625ee48d662c1f0286f44b8b0918d05d.patch";
+      sha256 = "sha256-pFRXpZjeVl5ZG/mOjHEuMg9zXq4Orwvdp+/LYTbR09I=";
+    })
   ] ++ lib.optional stdenv.hostPlatform.isMusl (
     let
       oe-core = fetchzip {
@@ -350,7 +364,7 @@ stdenv.mkDerivation (finalAttrs: {
   # when cross-compiling.
   + ''
     shopt -s extglob
-    patchShebangs tools test src/!(rpm|kernel-install) src/kernel-install/test-kernel-install.sh
+    patchShebangs tools test src/!(rpm|kernel-install|ukify) src/kernel-install/test-kernel-install.sh
   '';
 
   outputs = [ "out" "man" "dev" ];
@@ -415,6 +429,7 @@ stdenv.mkDerivation (finalAttrs: {
     ++ lib.optionals (withHomed || withCryptsetup) [ libfido2 ]
     ++ lib.optionals withLibBPF [ libbpf ]
     ++ lib.optional withTpm2Tss tpm2-tss
+    ++ lib.optional withUkify (python3Packages.python.withPackages (ps: with ps; [ pefile ]))
   ;
 
   #dontAddPrefix = true;
@@ -511,11 +526,10 @@ stdenv.mkDerivation (finalAttrs: {
     # more frequent development builds
     "-Dman=true"
 
-    # Temporary disable the ukify tool. see https://github.com/NixOS/nixpkgs/pull/216826#issuecomment-1465228824
-    "-Dukify=false"
-
     "-Defi=${lib.boolToString withEfi}"
     "-Dgnu-efi=${lib.boolToString withEfi}"
+
+    "-Dukify=${lib.boolToString withUkify}"
   ] ++ lib.optionals withEfi [
     "-Defi-libdir=${toString gnu-efi}/lib"
     "-Defi-includedir=${toString gnu-efi}/include/efi"
@@ -735,7 +749,7 @@ stdenv.mkDerivation (finalAttrs: {
 
     tests = {
       inherit (nixosTests) switchTest;
-      cross = pkgsCross.aarch64-multiplatform.systemd;
+      cross = pkgsCross.${if stdenv.buildPlatform.isAarch64 then "gnu64" else "aarch64-multiplatform"}.systemd;
     };
   };
 

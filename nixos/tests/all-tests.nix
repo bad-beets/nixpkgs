@@ -87,6 +87,7 @@ in {
   # Testing the test driver
   nixos-test-driver = {
     extra-python-packages = handleTest ./nixos-test-driver/extra-python-packages.nix {};
+    lib-extend = handleTestOn [ "x86_64-linux" "aarch64-linux" ] ./nixos-test-driver/lib-extend.nix {};
     node-name = runTest ./nixos-test-driver/node-name.nix;
   };
 
@@ -107,6 +108,7 @@ in {
   allTerminfo = handleTest ./all-terminfo.nix {};
   alps = handleTest ./alps.nix {};
   amazon-init-shell = handleTest ./amazon-init-shell.nix {};
+  anuko-time-tracker = handleTest ./anuko-time-tracker.nix {};
   apcupsd = handleTest ./apcupsd.nix {};
   apfs = runTest ./apfs.nix;
   apparmor = handleTest ./apparmor.nix {};
@@ -150,6 +152,7 @@ in {
   cage = handleTest ./cage.nix {};
   cagebreak = handleTest ./cagebreak.nix {};
   calibre-web = handleTest ./calibre-web.nix {};
+  calibre-server = handleTest ./calibre-server.nix {};
   cassandra_3_0 = handleTest ./cassandra.nix { testPackage = pkgs.cassandra_3_0; };
   cassandra_3_11 = handleTest ./cassandra.nix { testPackage = pkgs.cassandra_3_11; };
   cassandra_4 = handleTest ./cassandra.nix { testPackage = pkgs.cassandra_4; };
@@ -645,6 +648,7 @@ in {
   pulseaudio = discoverTests (import ./pulseaudio.nix);
   qboot = handleTestOn ["x86_64-linux" "i686-linux"] ./qboot.nix {};
   qemu-vm-restrictnetwork = handleTest ./qemu-vm-restrictnetwork.nix {};
+  qemu-vm-volatile-root = runTest ./qemu-vm-volatile-root.nix;
   quorum = handleTest ./quorum.nix {};
   quake3 = handleTest ./quake3.nix {};
   qownnotes = handleTest ./qownnotes.nix {};
